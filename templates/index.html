@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Healthcare Assistant</title>
+    <link rel="stylesheet" href="static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>OXY</h1>
+    </header>
+
+    <main class="container">
+      <h1>Healthcare Assistant</h1>
+
+      <form id="query-form" class="input-box">
+        <div class="input-field">
+          <input
+            type="text"
+            name="query"
+            id="query"
+            placeholder="Enter your health question..."
+            required
+          />
+          <div class="icons">
+            <button type="submit" aria-label="Submit your health query">
+              ➤
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <div id="loading-spinner" style="display: none">Loading...</div>
+      <div id="response-box" style="display: none"></div>
+    </main>
+
+    <script>
+      const form = document.getElementById("query-form");
+      const responseBox = document.getElementById("response-box");
+      const loadingSpinner = document.getElementById("loading-spinner");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const query = document.getElementById("query").value;
+
+        // Show loading spinner
+        loadingSpinner.style.display = "block";
+        responseBox.style.display = "none"; // Hide response box while loading
+
+        try {
+          const response = await fetch("/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ query }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to get a response from the server.");
+          }
+
+          const result = await response.json();
+          const causes = result.causes || [];
+          const medicines = result.medicines || [];
+          const remedies = result.remedies || [];
+
+          const hasAnyContent =
+            causes.length || medicines.length || remedies.length;
+
+          responseBox.innerHTML = `
+            <div class="response-card detailed">
+              ${
+                causes.length
+                  ? `
+                <div class="section">
+                  <h4>📝 Possible Cause(s):</h4>
+                  <ul>
+                    ${causes
+                      .map((item) => `<li>${item.replace(/\*{1,2}/g, "")}</li>`)
+                      .join("")}
+                  </ul>
+                </div>
+              `
+                  : ""
+              }
+
+              ${
+                medicines.length
+                  ? `
+                <div class="section">
+                  <h4>💊 Suggested Medicines (OTC):</h4>
+                  <ul>
+                    ${medicines
+                      .map((item) => `<li>${item.replace(/\*{1,2}/g, "")}</li>`)
+                      .join("")}
+                  </ul>
+                </div>
+              `
+                  : ""
+              }
+
+              ${
+                remedies.length
+                  ? `
+                <div class="section">
+                  <h4>🌿 Home Remedies:</h4>
+                  <ul>
+                    ${remedies
+                      .map((item) => `<li>${item.replace(/\*{1,2}/g, "")}</li>`)
+                      .join("")}
+                  </ul>
+                </div>
+              `
+                  : ""
+              }
+
+              ${
+                hasAnyContent
+                  ? `<p class="disclaimer">⚠️ Disclaimer: Always consult a healthcare provider.</p>`
+                  : ""
+              }
+            </div>
+          `;
+          responseBox.style.display = "block"; // Show response box
+        } catch (error) {
+          responseBox.innerHTML = `<div class="error-message">⚠️ An error occurred: ${error.message}</div>`;
+          responseBox.style.display = "block";
+        } finally {
+          loadingSpinner.style.display = "none"; // Hide loading spinner
+        }
+      });
+    </script>
+  </body>
+</html>
